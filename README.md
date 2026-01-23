@@ -26,8 +26,8 @@ AI-powered YouTube video analyzer that extracts insights, critiques claims, and 
 
 1. **Clone the repository**
    ```bash
-   git clone <repo-url>
-   cd tubecritique-ai
+   git clone https://github.com/LEKKALAGANESH/AI-powered-YouTube-video-summarization..git
+   cd AI-powered-YouTube-video-summarization.
    ```
 
 2. **Install dependencies**
