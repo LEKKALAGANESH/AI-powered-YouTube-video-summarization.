@@ -1,0 +1,6 @@
+
+{
+  "name": "TubeCritique AI",
+  "description": "High-performance YouTube Video Summarizer with AI-powered extraction, fact-checking, and deep critique workflow using Gemini 3 Pro and Google Search Grounding.",
+  "requestFramePermissions": []
+}
