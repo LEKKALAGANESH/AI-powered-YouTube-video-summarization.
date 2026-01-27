@@ -108,28 +108,44 @@ const storageService = {
 // API SERVICE
 // ============================================================================
 
+// Backend URL - uses Python backend in production, Next.js API in development
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
 interface ApiError {
   error: string;
+  detail?: string | { error: string; videoTitle?: string; videoChannel?: string; videoUrl?: string };
   videoTitle?: string;
   videoChannel?: string;
   videoUrl?: string;
 }
 
 async function analyzeVideo(videoUrl: string): Promise<SummaryResult> {
-  const response = await fetch("/api/analyze", {
+  // Determine endpoint - use Python backend if configured, else Next.js API
+  const endpoint = API_BASE_URL
+    ? `${API_BASE_URL}/api/analyze`
+    : "/api/analyze";
+
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ videoUrl }),
+    body: JSON.stringify({ video_url: videoUrl, videoUrl }), // Support both APIs
   });
 
   const data = await response.json();
 
   if (!response.ok) {
     const apiError = data as ApiError;
+    // Handle FastAPI error format (detail field)
+    const errorDetail = typeof apiError.detail === 'object' ? apiError.detail : null;
+    const errorMsg = errorDetail?.error || apiError.error || apiError.detail || "An error occurred";
+    const videoTitle = errorDetail?.videoTitle || apiError.videoTitle;
+    const videoChannel = errorDetail?.videoChannel || apiError.videoChannel;
+    const videoUrlInfo = errorDetail?.videoUrl || apiError.videoUrl;
+
     // Create enriched error with video details
-    const errorMessage = apiError.videoTitle
-      ? `${apiError.error}|VIDEO_INFO|${apiError.videoTitle}|${apiError.videoChannel || "Unknown"}|${apiError.videoUrl || ""}`
-      : apiError.error;
+    const errorMessage = videoTitle
+      ? `${errorMsg}|VIDEO_INFO|${videoTitle}|${videoChannel || "Unknown"}|${videoUrlInfo || ""}`
+      : String(errorMsg);
     throw new Error(errorMessage);
   }
 
