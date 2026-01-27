@@ -141,8 +141,32 @@ def extract_video_id(url: str) -> Optional[str]:
     return None
 
 
+def get_video_metadata_oembed(video_id: str) -> VideoMetadata:
+    """Fetch video metadata using YouTube oEmbed API (no auth required)."""
+    import httpx
+
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    oembed_url = f"https://www.youtube.com/oembed?url={url}&format=json"
+
+    try:
+        response = httpx.get(oembed_url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        return VideoMetadata(
+            title=data.get('title', 'Unknown Title'),
+            channel=data.get('author_name', 'Unknown Channel'),
+            duration=None,  # oEmbed doesn't provide duration
+            view_count=None,
+            thumbnail=data.get('thumbnail_url'),
+        )
+    except Exception as e:
+        print(f"[oEmbed] Error: {e}")
+        return VideoMetadata(title="Unknown Title", channel="Unknown Channel")
+
+
 def get_video_metadata(video_id: str) -> VideoMetadata:
-    """Fetch video metadata using yt-dlp."""
+    """Fetch video metadata using yt-dlp with oEmbed fallback."""
     url = f"https://www.youtube.com/watch?v={video_id}"
 
     ydl_opts: dict[str, Any] = {
@@ -177,7 +201,8 @@ def get_video_metadata(video_id: str) -> VideoMetadata:
             )
     except Exception as e:
         print(f"[yt-dlp] Error: {e}")
-        return VideoMetadata(title="Unknown Title", channel="Unknown Channel")
+        print("[yt-dlp] Falling back to oEmbed API...")
+        return get_video_metadata_oembed(video_id)
 
 
 def get_transcript(video_id: str) -> Optional[str]:
