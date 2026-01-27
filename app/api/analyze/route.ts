@@ -5,7 +5,11 @@ import { NextRequest, NextResponse } from "next/server";
 // ============================================================================
 
 // Python backend URL - if set, proxy requests to Python FastAPI backend
-const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL;
+// Ensure URL has protocol prefix
+const rawBackendUrl = process.env.PYTHON_BACKEND_URL || "";
+const PYTHON_BACKEND_URL = rawBackendUrl
+  ? rawBackendUrl.startsWith("http") ? rawBackendUrl : `https://${rawBackendUrl}`
+  : "";
 
 // ============================================================================
 // API ROUTE - Proxy to Python Backend
