@@ -1,14 +1,15 @@
 # User Guide
 
 **Project:** TubeCritique AI
-**Version:** 1.0.0
+**Version:** 2.0.0
 **Date:** January 2025
+**Last Updated:** January 28, 2025
 
 ---
 
 ## 1. Introduction
 
-TubeCritique AI is an intelligent YouTube video analyzer that extracts insights, generates summaries, and critiques content using AI. This guide will help you get the most out of the application.
+TubeCritique AI is an intelligent YouTube video analyzer that extracts insights, generates summaries, and critiques content using AI. Powered by Google's Gemini 2.0 Flash model, it can analyze videos by either watching them directly or processing their transcripts. This guide will help you get the most out of the application.
 
 ---
 
@@ -34,7 +35,7 @@ TubeCritique AI is an intelligent YouTube video analyzer that extracts insights,
 
 1. **Find a YouTube Video**
    - Go to YouTube and find a video you want to analyze
-   - Make sure the video has captions/subtitles enabled (CC icon)
+   - The video should be publicly accessible
 
 2. **Copy the Video URL**
    - Copy the URL from your browser's address bar
@@ -46,7 +47,7 @@ TubeCritique AI is an intelligent YouTube video analyzer that extracts insights,
 3. **Paste and Analyze**
    - Paste the URL into the input field
    - Click the "Analyze" button
-   - Wait for the analysis to complete (usually 10-30 seconds)
+   - Wait for the analysis to complete (usually 15-45 seconds)
 
 4. **View Results**
    - The analysis will display with multiple sections
@@ -56,9 +57,18 @@ TubeCritique AI is an intelligent YouTube video analyzer that extracts insights,
 
 | Requirement | Description |
 |-------------|-------------|
-| Captions | Video must have subtitles/closed captions |
-| Accessibility | Video must be publicly accessible |
+| Public Access | Video must be publicly accessible |
 | Length | Any length (longer videos may take more time) |
+| Captions | Helpful but not required (Gemini can watch video directly) |
+
+### 3.3 How Analysis Works
+
+TubeCritique AI uses a two-step approach:
+
+1. **Primary Method:** Gemini AI "watches" the video directly for comprehensive analysis
+2. **Fallback Method:** If direct viewing fails, it uses the video's transcript for text-based analysis
+
+This ensures maximum compatibility with different video types.
 
 ---
 
@@ -143,6 +153,15 @@ Actionable takeaways you can implement:
 
 Key points to remember for future reference.
 
+### 4.12 Craft Analysis
+
+For content creators, analysis of the video's production:
+- **Opening Hook:** How the video captures attention
+- **Structure Pattern:** How the content is organized
+- **Pacing Notes:** Flow and timing observations
+- **Sticky Moments:** Most memorable parts
+- **Editing Notes:** Production quality observations
+
 ---
 
 ## 5. Action Items Feature
@@ -191,19 +210,14 @@ Each card shows:
 
 ## 7. Error Handling
 
-### 7.1 No Captions Error
+### 7.1 Analysis Failed
 
-**Message:** "This video doesn't have captions/subtitles available"
+**Message:** "AI analysis failed. Please try again."
 
 **Solution:**
-- The video doesn't have CC enabled
-- Try a different video with captions
-- Many educational and official channels have captions
-
-**What you'll see:**
-- Video title and channel name
-- Link to the video
-- Error explanation
+- Click "Analyze" again
+- If persistent, try a different video
+- The backend may be temporarily unavailable
 
 ### 7.2 Rate Limit Error
 
@@ -213,13 +227,21 @@ Each card shows:
 - Wait a few minutes
 - Try again later
 
-### 7.3 Analysis Failed
+### 7.3 Backend Unavailable
 
-**Message:** "AI analysis failed. Please try again."
+**Message:** "Backend service unavailable"
 
 **Solution:**
-- Click "Analyze" again
-- If persistent, try a different video
+- Wait a moment and try again
+- The backend server may be starting up (especially on free tier hosting)
+
+### 7.4 Invalid URL
+
+**Message:** "Please provide a valid YouTube URL"
+
+**Solution:**
+- Ensure you're using a complete YouTube URL
+- Check for typos in the URL
 
 ---
 
@@ -231,12 +253,12 @@ Each card shows:
 - Educational content
 - Podcasts and interviews
 - Tech talks and presentations
-- Videos with clear audio and captions
+- Tutorial videos
+- Any video with clear audio
 
-**May have issues:**
-- Music videos (limited meaningful content)
-- Videos without captions
-- Very short clips
+**May have longer processing time:**
+- Very long videos (1+ hours)
+- Videos with complex visual content
 
 ### 8.2 Using the Analysis
 
@@ -268,9 +290,10 @@ Each card shows:
 
 ### 10.1 Data Storage
 
-- All analysis history stored in your browser only
+- All analysis history stored in your browser only (LocalStorage)
 - No account required
-- No data sent to external servers (except YouTube and Gemini API)
+- Video URLs are sent to our backend for processing
+- No personal data is collected or stored server-side
 
 ### 10.2 Clearing Data
 
@@ -281,18 +304,25 @@ To clear your history:
 
 Or clear all browser data for the site.
 
+### 10.3 What Data is Processed
+
+- Video URL (sent to backend)
+- Video metadata (fetched from YouTube)
+- Video content or transcript (processed by Gemini AI)
+- Analysis results (returned to your browser)
+
 ---
 
 ## 11. FAQ
 
 **Q: Why does analysis take time?**
-A: The AI needs to process the transcript and generate comprehensive insights. Usually 10-30 seconds.
+A: The AI needs to process the video content and generate comprehensive insights. Usually 15-45 seconds depending on video length.
 
 **Q: Can I analyze private videos?**
 A: No, only publicly accessible videos can be analyzed.
 
-**Q: Why no captions error on a video that has captions?**
-A: Some videos have auto-generated captions that may not be accessible. Try official/verified content.
+**Q: Do videos need captions?**
+A: No, captions are not required. Gemini AI can watch and analyze the video directly. Captions are used as a fallback if needed.
 
 **Q: Is my history synced across devices?**
 A: No, history is stored locally in your browser only.
@@ -303,11 +333,49 @@ A: Currently no export feature. You can copy/paste content manually.
 **Q: How accurate is the analysis?**
 A: The AI provides helpful insights but always verify critical claims independently.
 
+**Q: Why did analysis fail?**
+A: Common reasons include:
+- Backend server temporarily unavailable
+- Gemini API rate limits
+- Network connectivity issues
+Try again after a few moments.
+
+**Q: Can I analyze YouTube Shorts?**
+A: Yes, YouTube Shorts URLs are supported.
+
+**Q: What about live streams?**
+A: Live stream recordings can be analyzed after they end. Active live streams cannot be analyzed.
+
 ---
 
-## 12. Support
+## 12. Technical Details
+
+### 12.1 How It Works
+
+1. You submit a YouTube URL
+2. Our Python backend extracts video metadata
+3. Gemini AI analyzes the video content
+4. Structured analysis is returned to your browser
+5. Results are saved to LocalStorage
+
+### 12.2 AI Model
+
+- **Model:** Google Gemini 2.0 Flash
+- **Capabilities:** Native video understanding, text analysis
+- **Features:** Can "watch" videos directly for comprehensive analysis
+
+### 12.3 Backend Technology
+
+- **Framework:** FastAPI (Python)
+- **Hosting:** Railway or Render
+- **Video Processing:** yt-dlp, youtube-transcript-api
+
+---
+
+## 13. Support
 
 For issues or feedback:
 - Check the FAQ above
 - Review error messages carefully
 - Try a different video to isolate issues
+- Report issues at the project repository

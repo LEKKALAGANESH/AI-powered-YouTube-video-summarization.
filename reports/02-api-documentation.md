@@ -1,24 +1,43 @@
 # API Documentation Report
 
 **Project:** TubeCritique AI
-**Version:** 1.0.0
+**Version:** 2.0.0
 **Date:** January 2025
+**Last Updated:** January 28, 2025
 
 ---
 
 ## 1. API Overview
 
-The TubeCritique AI API provides a single endpoint for analyzing YouTube videos. It extracts transcripts, processes them with AI, and returns structured analysis data.
+The TubeCritique AI API is powered by a **Python FastAPI backend** that provides multiple endpoints for analyzing YouTube videos. The backend extracts video metadata, fetches transcripts, processes content with Gemini AI, and returns structured analysis data.
 
-**Base URL:**
-- Development: `http://localhost:3000`
-- Production: `https://your-domain.vercel.app`
+**Base URLs:**
+- Development (Backend): `http://localhost:8000`
+- Development (Frontend): `http://localhost:3000`
+- Production (Backend): `https://your-backend.railway.app` or `https://your-backend.onrender.com`
+- Production (Frontend): `https://your-domain.vercel.app`
 
 ---
 
 ## 2. Endpoints
 
-### 2.1 Analyze Video
+### 2.1 Health Check
+
+Check if the backend is running.
+
+**Endpoint:** `GET /`
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "TubeCritique API is running"
+}
+```
+
+---
+
+### 2.2 Analyze Video
 
 Analyzes a YouTube video and returns comprehensive insights.
 
@@ -32,9 +51,11 @@ Content-Type: application/json
 **Request Body:**
 ```json
 {
-  "videoUrl": "https://www.youtube.com/watch?v=VIDEO_ID"
+  "video_url": "https://www.youtube.com/watch?v=VIDEO_ID"
 }
 ```
+
+**Note:** The API also accepts `videoUrl` for backwards compatibility.
 
 **Supported URL Formats:**
 - `https://www.youtube.com/watch?v=VIDEO_ID`
@@ -42,6 +63,71 @@ Content-Type: application/json
 - `https://www.youtube.com/embed/VIDEO_ID`
 - `https://www.youtube.com/shorts/VIDEO_ID`
 - `https://www.youtube.com/live/VIDEO_ID`
+
+---
+
+### 2.3 Streaming Analysis
+
+Analyzes a video with real-time streaming updates via Server-Sent Events (SSE).
+
+**Endpoint:** `POST /api/analyze/stream`
+
+**Headers:**
+```
+Content-Type: application/json
+Accept: text/event-stream
+```
+
+**Request Body:**
+```json
+{
+  "video_url": "https://www.youtube.com/watch?v=VIDEO_ID"
+}
+```
+
+**Response:** Server-Sent Events stream with progress updates.
+
+---
+
+### 2.4 Get Video Metadata
+
+Fetch only the metadata for a video without full analysis.
+
+**Endpoint:** `GET /api/metadata/{video_id}`
+
+**Response:**
+```json
+{
+  "title": "Video Title",
+  "channel": "Channel Name",
+  "duration": "12:34",
+  "thumbnail": "https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg",
+  "view_count": 1234567
+}
+```
+
+---
+
+### 2.5 Get Video Transcript
+
+Fetch only the transcript for a video.
+
+**Endpoint:** `GET /api/transcript/{video_id}`
+
+**Response:**
+```json
+{
+  "video_id": "VIDEO_ID",
+  "transcript": "Full transcript text...",
+  "segments": [
+    {
+      "text": "Segment text",
+      "start": 0.0,
+      "duration": 5.0
+    }
+  ]
+}
+```
 
 ---
 
@@ -55,7 +141,7 @@ Content-Type: application/json
   "url": "https://www.youtube.com/watch?v=VIDEO_ID",
   "timestamp": 1706000000000,
   "title": "Video Title Here",
-  "duration": "15 min",
+  "duration": "15:30",
   "speaker": "Channel Name",
   "tldr": "Brief 2-3 sentence summary of the video content.",
   "comprehensiveSummary": "Detailed 300-500 word summary covering all major points...",
@@ -137,55 +223,43 @@ Content-Type: application/json
 #### Invalid URL (400 Bad Request)
 ```json
 {
-  "error": "Please provide a valid YouTube URL"
+  "detail": "Please provide a valid YouTube URL"
 }
 ```
 
 #### Invalid URL Format (400 Bad Request)
 ```json
 {
-  "error": "Invalid YouTube URL format"
+  "detail": "Invalid YouTube URL format"
 }
 ```
 
 #### No Captions Available (400 Bad Request)
 ```json
 {
-  "error": "This video doesn't have captions/subtitles available",
-  "videoTitle": "Video Title",
-  "videoChannel": "Channel Name",
-  "videoUrl": "https://www.youtube.com/watch?v=VIDEO_ID"
-}
-```
-
-#### Transcript Error (400 Bad Request)
-```json
-{
-  "error": "Failed to get transcript: Error message",
-  "videoTitle": "Video Title",
-  "videoChannel": "Channel Name",
-  "videoUrl": "https://www.youtube.com/watch?v=VIDEO_ID"
+  "detail": "Could not retrieve transcript for this video",
+  "video_id": "VIDEO_ID"
 }
 ```
 
 #### Rate Limit (429 Too Many Requests)
 ```json
 {
-  "error": "API rate limit reached. Please wait and try again."
+  "detail": "API rate limit reached. Please wait and try again."
 }
 ```
 
 #### AI Analysis Failed (500 Internal Server Error)
 ```json
 {
-  "error": "AI analysis failed. Please try again."
+  "detail": "AI analysis failed. Please try again."
 }
 ```
 
-#### Unexpected Error (500 Internal Server Error)
+#### Backend Not Configured (502 Bad Gateway)
 ```json
 {
-  "error": "An unexpected error occurred"
+  "error": "Backend service unavailable"
 }
 ```
 
@@ -199,9 +273,9 @@ Content-Type: application/json
 |-------|------|-------------|
 | `id` | string | Unique identifier for the analysis |
 | `url` | string | Normalized YouTube URL |
-| `timestamp` | number | Unix timestamp of analysis |
+| `timestamp` | number | Unix timestamp of analysis (milliseconds) |
 | `title` | string | Video title from YouTube |
-| `duration` | string | Estimated video duration |
+| `duration` | string | Video duration (MM:SS format) |
 | `speaker` | string | Channel/creator name |
 
 ### 4.2 Summary Fields
@@ -264,36 +338,43 @@ Content-Type: application/json
 | Limit Type | Value | Notes |
 |------------|-------|-------|
 | Gemini API | Varies | Based on your API plan |
-| Request Timeout | 120s | Configured in vercel.json |
-| Transcript Length | 50,000 chars | Truncated if exceeded |
+| Request Timeout | 300s | Backend default |
+| Transcript Length | ~50,000 chars | Truncated if exceeded |
 
 ---
 
 ## 6. Example Usage
 
-### cURL
+### cURL (Direct to Backend)
 ```bash
-curl -X POST https://your-domain.vercel.app/api/analyze \
+curl -X POST https://your-backend.railway.app/api/analyze \
   -H "Content-Type: application/json" \
-  -d '{"videoUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}'
+  -d '{"video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}'
+```
+
+### cURL (Health Check)
+```bash
+curl https://your-backend.railway.app/
 ```
 
 ### JavaScript (Fetch)
 ```javascript
-const response = await fetch('/api/analyze', {
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+const response = await fetch(`${API_URL}/api/analyze`, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+    video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
   }),
 });
 
 const data = await response.json();
 
 if (!response.ok) {
-  console.error('Error:', data.error);
+  console.error('Error:', data.detail);
 } else {
   console.log('Analysis:', data);
 }
@@ -303,9 +384,11 @@ if (!response.ok) {
 ```python
 import requests
 
+API_URL = "https://your-backend.railway.app"
+
 response = requests.post(
-    'https://your-domain.vercel.app/api/analyze',
-    json={'videoUrl': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'}
+    f'{API_URL}/api/analyze',
+    json={'video_url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'}
 )
 
 if response.status_code == 200:
@@ -313,7 +396,21 @@ if response.status_code == 200:
     print(f"Title: {data['title']}")
     print(f"Summary: {data['tldr']}")
 else:
-    print(f"Error: {response.json()['error']}")
+    print(f"Error: {response.json()['detail']}")
+```
+
+### Python (Async with httpx)
+```python
+import httpx
+
+async def analyze_video(video_url: str):
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            'http://localhost:8000/api/analyze',
+            json={'video_url': video_url},
+            timeout=120.0
+        )
+        return response.json()
 ```
 
 ---
@@ -322,11 +419,13 @@ else:
 
 ```javascript
 async function analyzeVideo(url) {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
   try {
-    const response = await fetch('/api/analyze', {
+    const response = await fetch(`${API_URL}/api/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ videoUrl: url }),
+      body: JSON.stringify({ video_url: url }),
     });
 
     const data = await response.json();
@@ -334,17 +433,15 @@ async function analyzeVideo(url) {
     if (!response.ok) {
       // Handle specific error cases
       if (response.status === 400) {
-        if (data.videoTitle) {
-          // Video found but no captions
-          console.log(`Video: ${data.videoTitle}`);
-          console.log(`Channel: ${data.videoChannel}`);
-        }
-        throw new Error(data.error);
+        throw new Error(data.detail || 'Invalid request');
       }
       if (response.status === 429) {
         throw new Error('Rate limited. Please wait.');
       }
-      throw new Error(data.error || 'Unknown error');
+      if (response.status === 502) {
+        throw new Error('Backend service unavailable');
+      }
+      throw new Error(data.detail || 'Unknown error');
     }
 
     return data;
@@ -353,4 +450,37 @@ async function analyzeVideo(url) {
     throw error;
   }
 }
+```
+
+---
+
+## 8. Backend Configuration
+
+### 8.1 CORS Settings
+
+The backend is configured to accept requests from:
+- `http://localhost:3000` (development)
+- `https://*.vercel.app` (production)
+
+### 8.2 Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GEMINI_API_KEY` | Yes | Google Gemini API key |
+| `PORT` | No | Server port (default: 8000) |
+
+---
+
+## 9. Analysis Workflow
+
+```
+1. Client sends POST /api/analyze with video_url
+2. Backend extracts video ID from URL
+3. Backend fetches metadata via yt-dlp
+   - Fallback: YouTube oEmbed API
+4. Backend attempts native video analysis with Gemini
+   - Gemini "watches" the video directly
+   - Fallback: Fetch transcript and analyze text
+5. Backend parses AI response to JSON
+6. Backend adds metadata and returns result
 ```
